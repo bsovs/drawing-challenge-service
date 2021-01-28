@@ -122,16 +122,16 @@ module.exports = {
 					limit: 100,
 					query: {
 						users: {$size: 1},
-						'users.0.user_id': {$ne: ctx.meta.user.user_id},
+						"users.0.user_id": {$ne: ctx.meta.user.user_id},
 						is_private: false
 					}
 				});
 				if (game && game.length > 0) {
-					this.logger.info('Joined Game');
-					return await ctx.call('game.join', {game_id: game[0]._id, user_id: ctx.meta.user.user_id});
+					this.logger.info("Joined Game");
+					return await ctx.call("game.join", {game_id: game[0]._id, user_id: ctx.meta.user.user_id});
 				} else {
-					this.logger.info('New Game Created');
-					return await ctx.call('game.new', {user_id: ctx.meta.user.user_id});
+					this.logger.info("New Game Created");
+					return await ctx.call("game.new", {user_id: ctx.meta.user.user_id});
 				}
 			}
 		},

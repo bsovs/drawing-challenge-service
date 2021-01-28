@@ -2,7 +2,7 @@
 
 const ApiGateway = require("moleculer-web");
 const admin = require("firebase-admin");
-require('dotenv').config();
+require("dotenv").config();
 
 /**
  * @typedef {import('moleculer').Context} Context Moleculer's Context
@@ -111,7 +111,7 @@ module.exports = {
 			folder: "build",
 
 			// Options to `server-static` module
-			options: { 'index': ['index.html'] }
+			options: { "index": ["index.html"] }
 		}
 	},
 
@@ -141,10 +141,10 @@ module.exports = {
 							return userCredential;
 						})
 						.catch((error) => {
-							throw new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_INVALID_TOKEN);
+							throw new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_INVALID_TOKEN, error);
 						});
 				} else {
-					throw new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_NO_TOKEN);
+					throw new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_NO_TOKEN, "auth token not provided");
 				}
 			}
 		},
@@ -161,7 +161,7 @@ module.exports = {
 			const user = ctx.meta.user;
 
 			if (req.$action.auth && !user) {
-				throw new ApiGateway.Errors.UnAuthorizedError('No rights!');
+				throw new ApiGateway.Errors.UnAuthorizedError("No rights!");
 			}
 		},
 
