@@ -169,8 +169,12 @@ module.exports = {
 
 	created() {
 		if (admin.apps?.length) return;
-		admin.initializeApp({
-			credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_AUTH))
-		});
+		try {
+			admin.initializeApp({
+				credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_AUTH))
+			});
+		} catch (e) {
+			this.logger.error(e);
+		}
 	}
 };

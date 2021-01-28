@@ -16,15 +16,15 @@
   ],
   "author": "",
   "devDependencies": {
-    "dotenv": "^8.2.0",
     "eslint": "^7.7.0",
-    "firebase-admin": "^9.4.2",
     "jest": "^26.4.2",
     "jest-cli": "^26.4.2",
     "moleculer-repl": "^0.6.4"
   },
   "dependencies": {
+    "dotenv": "^8.2.0",
     "firebase": "^8.2.4",
+    "firebase-admin": "^9.4.2",
     "moleculer": "^0.14.10",
     "moleculer-db": "^0.8.4",
     "moleculer-db-adapter-mongo": "^0.4.7",
