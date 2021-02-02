@@ -23,6 +23,7 @@
     "moleculer-repl": "^0.6.4"
   },
   "dependencies": {
+    "async": "^3.2.0",
     "dotenv": "^8.2.0",
     "firebase": "^8.2.4",
     "firebase-admin": "^9.4.2",
@@ -30,6 +31,7 @@
     "moleculer-db": "^0.8.4",
     "moleculer-db-adapter-mongo": "^0.4.7",
     "moleculer-web": "^0.9.0",
+    "mongodb": "^3.6.3",
     "serve-static": "^1.14.1"
   },
   "engines": {

@@ -1,14 +1,17 @@
 "use strict";
 
 const DbMixin = require("../../mixins/db.mixin");
+const AsyncMixin = require("../../mixins/async.mixin");
 const {MoleculerError} = require("moleculer").Errors;
 const GameModel = require("./models/game.model");
 const PlayerModel = require("./models/player.model");
+const mongodb = require("mongodb");
+const ObjectID = mongodb.ObjectID;
 
 module.exports = {
 	name: "game",
 
-	mixins: [DbMixin("game")],
+	mixins: [DbMixin("game"), AsyncMixin("game")],
 
 	settings: {
 		// Available fields in the responses
@@ -16,6 +19,7 @@ module.exports = {
 			"_id",
 			"users",
 			"is_private",
+			"prompt",
 			"type"
 		],
 
@@ -87,7 +91,16 @@ module.exports = {
 				game_id: "string"
 			},
 			async handler(ctx) {
-				return await this.adapter.findById(ctx.params.game_id);
+				if (!ctx.params.game_id) throw new MoleculerError("game_id required", 401, "NO_GAMEID");
+
+				const game = await this.adapter.findById(ctx.params.game_id);
+				if (!game) {
+					throw new MoleculerError("Game Not Found", 404, "INVALID_GAMEID");
+				} else if (game.users.length !== 2) {
+					throw new MoleculerError("Game Not Completed", 404, "GAME_NOT_COMPLETED");
+				} else {
+					return game;
+				}
 			}
 		},
 		/**
@@ -100,11 +113,9 @@ module.exports = {
 				user_id: "string"
 			},
 			async handler(ctx) {
-				return await this.adapter.find({
-					query: {
-						_id: ctx.params.game_id,
-						users: {$elemMatch: {user_id: ctx.params.user_id}}
-					}
+				return await this.adapter.findOne({
+					_id: ObjectID(ctx.params.game_id),
+					users: {$elemMatch: {user_id: ctx.params.user_id}}
 				});
 			}
 		},
@@ -114,25 +125,9 @@ module.exports = {
 		play: {
 			auth: true,
 			rest: "POST /play",
-			params: {
-				user_id: "string"
-			},
+			params: {},
 			async handler(ctx) {
-				const game = await this.adapter.find({
-					limit: 100,
-					query: {
-						users: {$size: 1},
-						"users.0.user_id": {$ne: ctx.meta.user.user_id},
-						is_private: false
-					}
-				});
-				if (game && game.length > 0) {
-					this.logger.info("Joined Game");
-					return await ctx.call("game.join", {game_id: game[0]._id, user_id: ctx.meta.user.user_id});
-				} else {
-					this.logger.info("New Game Created");
-					return await ctx.call("game.new", {user_id: ctx.meta.user.user_id});
-				}
+				return await this.queue(ctx);
 			}
 		},
 		/**
@@ -140,16 +135,18 @@ module.exports = {
 		 */
 		join: {
 			auth: true,
-			rest: "POST /join-game",
+			rest: "POST /join",
 			params: {
-				game_id: "string",
-				user_id: "string",
+				game_id: "any",
 				is_private: {type: "boolean", optional: true}
 			},
 			async handler(ctx) {
 				const game = await this.adapter.findById(ctx.params.game_id);
-				if (!game || !game.users || game.users.length !== 1) {
+				if (!game || !game.users) {
 					throw new MoleculerError("Invalid Game ID for User", 401, "ERR", {});
+				}
+				if (game.users.length !== 1) {
+					throw new MoleculerError("Game does not exist or has already been completed", 404, "ERR", {});
 				}
 				if (ctx.params.is_private && !game.is_private) {
 					throw new MoleculerError("Invalid Privacy Level", 401, "ERR", {});
@@ -169,6 +166,8 @@ module.exports = {
 				const json = await this.transformDocuments(ctx, ctx.params, doc);
 				await this.entityChanged("updated", json, ctx);
 
+				await ctx.call("profile.addGame", {game_id: json._id});
+
 				return json;
 			}
 		},
@@ -177,7 +176,7 @@ module.exports = {
 		 */
 		new: {
 			auth: true,
-			rest: "POST /new-game",
+			rest: "POST /new",
 			params: {
 				is_private: {type: "boolean", optional: true}
 			},
@@ -186,10 +185,18 @@ module.exports = {
 				let playerModel = new PlayerModel();
 				playerModel.user_id = ctx.meta.user.user_id;
 				gameModel.users.push(playerModel);
+				gameModel.is_private = ctx.params.is_private;
+
+				const prompt = await ctx.call("prompts.random");
+				gameModel.prompt = prompt.text;
+
 				const doc = await this.adapter.insert(gameModel);
 
 				const json = await this.transformDocuments(ctx, ctx.params, doc);
 				await this.entityChanged("inserted", json, ctx);
+
+				await ctx.call("profile.addGame", {game_id: json._id});
+
 				return json;
 			}
 		},
@@ -206,13 +213,13 @@ module.exports = {
 			async handler(ctx) {
 				const game = await this.adapter.findById(ctx.params.game_id);
 				if (!game || !game.users || game.users.length !== 2) {
-					throw new MoleculerError("Invalid Game ID for User", 401, "ERR", {});
+					throw new MoleculerError("Invalid Game ID", 404, "ERR", {});
 				}
 
 				const userNumber = game.users.findIndex(user => user.user_id === ctx.params.vote_id);
-				if (userNumber === -1) throw new MoleculerError("Invalid Game ID for User", 401, "ERR", {});
+				if (userNumber === -1) throw new MoleculerError("User ID Not Found in Game", 404, "ERR", {});
 
-				//const canVote = await ctx.call('profile.vote', ctx.params);
+				await ctx.call("profile.vote", {vote_id: ctx.params.vote_id, game_id: game._id});
 
 				const query = `users.${userNumber}.votes`;
 				const doc = await this.adapter.updateById(ctx.params.game_id,
@@ -223,6 +230,26 @@ module.exports = {
 				await this.entityChanged("updated", json, ctx);
 
 				return json;
+			}
+		},
+		/**
+		 * Get Filtered Game List
+		 */
+		filteredList: {
+			params: {
+				filter_out: "array"
+			},
+			async handler(ctx) {
+				return await this.adapter.collection.find({
+
+					users: {$size: 2},
+					is_private: {$ne: true},
+					active: {$ne: false},
+					_id: {$nin: ctx.params.filter_out},
+					"users.0.user_id": {$ne: ctx.meta.user.user_id},
+					"users.1.user_id": {$ne: ctx.meta.user.user_id}
+
+				}).project({users: 0}).limit(100).toArray();
 			}
 		},
 	},
@@ -237,7 +264,8 @@ module.exports = {
 						{user_id: "111b", drawing_data: "^%FTUVV&^&^^WCDCVUWbib7&T^", votes: 3}
 					],
 					is_private: false,
-					type: "vs"
+					type: "vs",
+					prompt: "test 123"
 				},
 				{
 					_id: "123b",
@@ -246,7 +274,8 @@ module.exports = {
 						{user_id: "111b", drawing_data: "^%FTUVV&^&^^WCsdvDCVUWbib7&T^", votes: 3}
 					],
 					is_private: true,
-					type: "vs"
+					type: "vs",
+					prompt: "test 123"
 				},
 				{
 					_id: "123c",
@@ -254,7 +283,8 @@ module.exports = {
 						{user_id: "user1", drawing_data: "^%FTUVVTDXTadsWCDCVUWbib7&T^", votes: 4},
 					],
 					is_private: false,
-					type: "vs"
+					type: "vs",
+					prompt: "test 123"
 				},
 			]);
 		}
