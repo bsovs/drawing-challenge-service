@@ -32,7 +32,7 @@ module.exports = {
 			// Configures the Access-Control-Allow-Methods CORS header.
 			methods: ["GET", "POST"],
 			// Configures the Access-Control-Allow-Headers CORS header.
-			allowedHeaders: ["Authorization"],
+			allowedHeaders: ["Origin, X-Requested-With, Content-Type, Accept, Authorization"],
 			// Configures the Access-Control-Expose-Headers CORS header.
 			exposedHeaders: ["Authorization"],
 			// Configures the Access-Control-Allow-Credentials CORS header.
