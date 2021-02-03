@@ -28,15 +28,15 @@ module.exports = {
 		// Global CORS settings for all routes
 		cors: {
 			// Configures the Access-Control-Allow-Origin CORS header.
-			origin: "https://drawingchallenge5.web.app/",
+			origin: "https://drawingchallenge5.web.app/*",
 			// Configures the Access-Control-Allow-Methods CORS header.
 			methods: ["GET", "POST"],
 			// Configures the Access-Control-Allow-Headers CORS header.
-			allowedHeaders: [],
+			allowedHeaders: ["Authorization"],
 			// Configures the Access-Control-Expose-Headers CORS header.
 			exposedHeaders: ["Authorization"],
 			// Configures the Access-Control-Allow-Credentials CORS header.
-			credentials: false,
+			credentials: true,
 			// Configures the Access-Control-Max-Age CORS header.
 			maxAge: 3600
 		},
