@@ -2,6 +2,8 @@
 
 const DbMixin = require("../../mixins/db.mixin");
 const {MoleculerError} = require("moleculer").Errors;
+const mongodb = require("mongodb");
+const ObjectID = mongodb.ObjectID;
 
 module.exports = {
 	name: "profile",
@@ -121,6 +123,20 @@ module.exports = {
 			}
 		},
 		/**
+		 * Get Games
+		 */
+		games: {
+			auth: true,
+			rest: "GET /games",
+			async handler(ctx) {
+				const user = await this.adapter.findById(ctx.meta.user.user_id);
+				const game_ids = user.games.map(game => game.game_id);
+				return await ctx.call("game.getGames", {
+					game_ids: game_ids,
+				});
+			}
+		},
+		/**
 		 * Vote
 		 */
 		vote: {
@@ -163,20 +179,7 @@ module.exports = {
 	},
 
 	methods: {
-		async seedDB() {
-			await this.adapter.insertMany([
-				{
-					_id: "brando",
-					display_name: "brandon",
-					games: [
-						{game_id: "123c"},
-					],
-					votes: ["123abc"],
-					coins: 0,
-					gems: 0
-				}
-			]);
-		}
+		async seedDB() {}
 	},
 
 	async afterConnected() {

@@ -120,6 +120,24 @@ module.exports = {
 			}
 		},
 		/**
+		 * Get All Game Data
+		 */
+		getGames: {
+			params: {
+				game_ids: "array"
+			},
+			async handler(ctx) {
+				if (!ctx.params.game_ids) throw new MoleculerError("game_ids required", 401, "NO_GAMEID");
+
+				const games = await this.adapter.findByIds(ctx.params.game_ids);
+				if (!games) {
+					throw new MoleculerError("Games Not Found", 404, "INVALID_GAMEID");
+				}else {
+					return games;
+				}
+			}
+		},
+		/**
 		 * Join/Create New Game
 		 */
 		play: {
@@ -148,6 +166,9 @@ module.exports = {
 				if (game.users.length !== 1) {
 					throw new MoleculerError("Game does not exist or has already been completed", 404, "ERR", {});
 				}
+				if (game.users[0].user_id === ctx.meta.user.user_id) {
+					throw new MoleculerError("Cannot join own game", 401, "ERR", {});
+				}
 				if (ctx.params.is_private && !game.is_private) {
 					throw new MoleculerError("Invalid Privacy Level", 401, "ERR", {});
 				}
@@ -157,6 +178,7 @@ module.exports = {
 						users: {
 							$each: [{
 								user_id: ctx.meta.user.user_id,
+								display_name: ctx.meta.user.name,
 								drawing_data: null,
 								votes: 0
 							}]
@@ -184,6 +206,7 @@ module.exports = {
 				let gameModel = new GameModel();
 				let playerModel = new PlayerModel();
 				playerModel.user_id = ctx.meta.user.user_id;
+				playerModel.display_name = ctx.meta.user.name,
 				gameModel.users.push(playerModel);
 				gameModel.is_private = ctx.params.is_private;
 
@@ -256,37 +279,6 @@ module.exports = {
 
 	methods: {
 		async seedDB() {
-			await this.adapter.insertMany([
-				{
-					_id: "123a",
-					users: [
-						{user_id: "876b", drawing_data: "^%FTUVVTDXTWCDCVUWbib7&T^", votes: 0},
-						{user_id: "111b", drawing_data: "^%FTUVV&^&^^WCDCVUWbib7&T^", votes: 3}
-					],
-					is_private: false,
-					type: "vs",
-					prompt: "test 123"
-				},
-				{
-					_id: "123b",
-					users: [
-						{user_id: "876b", drawing_data: "^%FTUVVTDXTadsWCDCVUWbib7&T^", votes: 4},
-						{user_id: "111b", drawing_data: "^%FTUVV&^&^^WCsdvDCVUWbib7&T^", votes: 3}
-					],
-					is_private: true,
-					type: "vs",
-					prompt: "test 123"
-				},
-				{
-					_id: "123c",
-					users: [
-						{user_id: "user1", drawing_data: "^%FTUVVTDXTadsWCDCVUWbib7&T^", votes: 4},
-					],
-					is_private: false,
-					type: "vs",
-					prompt: "test 123"
-				},
-			]);
 		}
 	},
 

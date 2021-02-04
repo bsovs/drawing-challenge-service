@@ -57,7 +57,10 @@ module.exports = {
 				text: "string"
 			},
 			async handler(ctx) {
-				return await this.adapter.insert({text: ctx.params.text});
+				return await this.adapter.insert({
+					text: ctx.params.text,
+					date: Date.now()
+				});
 			}
 		},
 	},
@@ -65,9 +68,9 @@ module.exports = {
 	methods: {
 		async seedDB() {
 			await this.adapter.insertMany([
-				{text: "ungu bunga"},
-				{text: "ooga booga"},
-				{text: "test prompt 123"}
+				{text: "ungu bunga", date: Date.now()},
+				{text: "ooga booga", date: Date.now()},
+				{text: "test prompt 123", date: Date.now()}
 			]);
 		}
 	},
