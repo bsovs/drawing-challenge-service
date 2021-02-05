@@ -15,7 +15,8 @@ module.exports = {
 			"_id",
 			"games",
 			"prompt",
-			"game_id"
+			"game_id",
+			"display_name"
 		],
 
 		entityValidator: {
@@ -48,11 +49,13 @@ module.exports = {
 		 */
 		me: {
 			auth: true,
-			rest: "GET /me",
-			params: {},
+			rest: "POST /me",
+			params: {
+				display_name: {type: "string", optional: true}
+			},
 			async handler(ctx) {
 				const user = await this.adapter.findById(ctx.meta.user.user_id);
-				if (!user) return await ctx.call("profile.new");
+				if (!user) return await ctx.call("profile.new", ctx.params);
 				else return user;
 			}
 		},
@@ -61,10 +64,13 @@ module.exports = {
 		 */
 		new: {
 			auth: true,
+			params: {
+				display_name: {type: "string", optional: false}
+			},
 			async handler(ctx) {
 				const doc = await this.adapter.insert({
 					_id: ctx.meta.user.user_id,
-					display_name: ctx.meta.user.name,
+					display_name: ctx.params.display_name,
 					games: [],
 					votes: [],
 					coins: 0,

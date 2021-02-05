@@ -28,7 +28,7 @@ module.exports = {
 		// Global CORS settings for all routes
 		cors: {
 			// Configures the Access-Control-Allow-Origin CORS header.
-			origin: "https://drawingchallenge5.web.app/*, http://localhost:3000/*",
+			origin: "https://drawingchallenge5.web.app/*, http://localhost:3000/*, http://localhost:5000/*",
 			// Configures the Access-Control-Allow-Methods CORS header.
 			methods: ["GET", "POST"],
 			// Configures the Access-Control-Allow-Headers CORS header.
